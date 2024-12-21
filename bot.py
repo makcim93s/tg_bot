@@ -23,7 +23,7 @@ current_client = {}
 
 # Столбцы таблицы
 columns = [
-    "Должность", "Имя", "Отчество", "Номер телефона", "Адрес", 
+    "Должность`", "Имя`", "Отчество`", "Мобильный телефон", "Адрес", 
     "Фото входной группы", "Тип автомата", 
     "Предложенная аренда (рубли)", "Описание, детали"
 ]
@@ -74,6 +74,23 @@ async def ask_for_position(update: Update, context: CallbackContext) -> None:
 def is_valid_phone_number(phone: str) -> bool:
     phone_pattern = re.compile(r'^(?:\+?(\d{1,2}))?(\()?(\d{3})(?(2)\))(\d{3})(\d{2})(\d{2})$')
     return bool(phone_pattern.match(phone))
+    #Функция для обработки фотографии
+async def handle_photo(update: Update, context: CallbackContext) -> None:
+    global current_client
+    # Получаем ID фото и ссылку на него
+    photo_id = update.message.photo[-1].file_id
+    file = await context.bot.get_file(photo_id)
+    photo_url = file.file_path  # Получаем прямую ссылку на фото
+
+    # Добавляем ссылку на фото в таблицу
+    current_client["Фото входной группы"] = photo_url
+
+    # Отправляем сообщение пользователю, что фото загружено
+    await update.message.reply_text(f"Фото загружено! Ссылка на фото добавлена в таблицу:\n{photo_url}")
+
+    # Переходим к следующему запросу (например, тип автомата)
+    await update.message.reply_text("Теперь введите тип автомата.")
+
 # Обработчик текстовых сообщений
 async def handle_text(update: Update, context: CallbackContext) -> None:
     global current_client
@@ -95,9 +112,9 @@ async def handle_text(update: Update, context: CallbackContext) -> None:
                 current_client["Отчество"] = ''
             await update.message.reply_text("Теперь введите номер телефона")
         # Если номер телефона еще не введен
-        elif current_client["Номер телефона"] == '':
+        elif current_client["Мобильный телефон"] == '':
             if is_valid_phone_number(text):
-                current_client["Номер телефона"] = text
+                current_client["Мобильный телефон"] = text
                 await update.message.reply_text("Теперь введите адрес.")
             else:
                 await update.message.reply_text("Ошибка! Неверный формат номера телефона. Введите номер в правильном формате (например,+7(999)9005050.")
@@ -108,7 +125,7 @@ async def handle_text(update: Update, context: CallbackContext) -> None:
             await update.message.reply_text("Теперь отправьте фото входной группы.")
         # Если фото входной группы еще не введено
         elif current_client["Фото входной группы"] == '':
-            current_client["Фото входной группы"] = text
+            await update.message.reply_text("Пожалуйста, отправьте фото входной группы.")
             await update.message.reply_text("Теперь введите тип автомата.")
         # Если тип автомата еще не введен
         elif current_client["Тип автомата"] == '':
@@ -234,6 +251,9 @@ def main():
 
     # Обработчик текстовых сообщений
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+    
+    # Обработчики фото
+    application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 
     # Запуск бота
     application.run_polling()
