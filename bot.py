@@ -6,6 +6,10 @@ from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboard
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, CallbackContext
 import logging
 import re
+import random
+
+
+
 
 # Включаем логирование
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -37,7 +41,7 @@ async def start(update: Update, context: CallbackContext) -> None:
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     await update.message.reply_text(
-        "Привет! 😊 Я — бот, который поможет тебе собрать все данные о клиентах и организовать их в удобной таблице. 📝\n\nТы можешь ввести информацию о клиенте, загрузить фотографии 📸, выбрать тип автомата, указать аренду и многое другое! \n\nЯ готов помочь тебе с этим, а если что-то будет непонятно, всегда можешь обратиться в раздел помощи! 🤖\n\nДавай начнем сессию и внесем все данные, как настоящий профессионал! 💼", 
+        "Привет! Я — бот, который поможет тебе собрать все данные о клиентах и организовать их в удобной таблице. \n\nТы можешь ввести информацию о клиенте, загрузить фотографии, выбрать тип автомата, указать аренду и многое другое! \n\nЯ готов помочь тебе с этим, а если что-то будет непонятно, всегда можешь обратиться в раздел помощи! \n\nДавай начнем сессию и внесем все данные, как настоящий профессионал! ", 
         reply_markup=reply_markup
     )
 
@@ -64,7 +68,7 @@ async def handle_help(update: Update, context: CallbackContext) -> None:
         "4. Для завершения сессии нажмите кнопку 'Завершить'.\n"
         "5. По завершению, бот отправит CSV файл с введенными данными."
         "6. Для сброса нажмите в меню кнопку 'Сбросить' - это сбросит полностью все данные без сохранения!!!"
-        "\n\n\nСоздатель бота — @makcim93s. 😉🎉"
+        "\n\n\nСоздатель бота — @makcim93s. "
     )
     await update.message.reply_text(help_text)
 
@@ -202,6 +206,8 @@ async def show_continue_finish_buttons(update: Update, context: CallbackContext)
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Данные для текущего клиента сохранены. Хотите продолжить для следующего клиента или завершить сессию?", reply_markup=reply_markup)
 
+import random
+
 # Обработчик кнопок "Продолжить" и "Завершить"
 async def handle_button(update: Update, context: CallbackContext) -> None:
     global is_session_active, current_client, table
@@ -251,12 +257,33 @@ async def handle_button(update: Update, context: CallbackContext) -> None:
             logger.error(f"Ошибка при отправке файла: {e}")
             await query.edit_message_text("Произошла ошибка при отправке файла.")
 
+        # Отправляем случайное изображение
+        images_dir = r"C:\users\administrator\downloads\bots\photo" # Название директории с фотографиями
+        try:
+            if os.path.exists(images_dir) and os.path.isdir(images_dir):
+                images = [os.path.join(images_dir, f) for f in os.listdir(images_dir) if f.lower().endswith(('png', 'jpg', 'jpeg'))]
+                if images:
+                    random_image = random.choice(images)
+                    with open(random_image, 'rb') as img_file:
+                        await query.message.reply_photo(photo=img_file)
+                    logger.info(f"Случайное изображение {random_image} отправлено.")
+                else:
+                    logger.warning("Директория с изображениями пуста.")
+                    await query.message.reply_text("Не удалось отправить изображение: директория пуста.")
+            else:
+                logger.warning("Директория с изображениями не найдена.")
+                await query.message.reply_text("Не удалось отправить изображение: директория не найдена.")
+        except Exception as e:
+            logger.error(f"Ошибка при отправке изображения: {e}")
+            await query.message.reply_text("Произошла ошибка при отправке изображения.")
+
         # Завершаем сессию
         is_session_active = False
         table.clear()  # Очищаем таблицу после отправки
-        await query.edit_message_text("Сессия завершена и файл отправлен.")
+        await query.edit_message_text("Сессия завершена и файл отправлен. Ты молодец получи бонус за хорошую работу!")
     else:
         await query.edit_message_text("Нет активной сессии.")
+
 
 # Обработчик кнопки "Закончить предварительно"
 async def handle_end_session_early(update: Update, context: CallbackContext) -> None:
